@@ -5,7 +5,7 @@ on:
   push:
     paths:
       - 'LifeTrack_Android_Project_fixed.zip'
-      - '.github/workflows/main.yml'
+      - '.github/workflows/**'
 
 jobs:
   build:
@@ -23,27 +23,29 @@ jobs:
 
       - name: Extract project
         run: |
-          mkdir extracted
+          mkdir -p extracted
           unzip -o LifeTrack_Android_Project_fixed.zip -d extracted
-          find extracted -name settings.gradle -o -name settings.gradle.kts
+          find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \)
 
       - name: Build APK
         run: |
-          PROJECT_DIR="$(dirname "$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)")"
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Gradle settings file not found"
+          SETTINGS=$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
+          if [ -z "$SETTINGS" ]; then
+            echo "ERROR: Gradle settings file not found"
             exit 1
           fi
-          echo "Building project in $PROJECT_DIR"
+          PROJECT_DIR=$(dirname "$SETTINGS")
           cd "$PROJECT_DIR"
-          chmod +x ./gradlew 2>/dev/null || true
-          if [ -f ./gradlew ]; then
+
+          if [ -f gradlew ]; then
+            chmod +x gradlew
             ./gradlew assembleDebug
           else
             gradle assembleDebug
           fi
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: LifeTrack-APK
